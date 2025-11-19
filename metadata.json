@@ -1,0 +1,7 @@
+{
+  "name": "RideTogether",
+  "description": "A real-time dashboard for cyclists and runners to track relative position, speed, and communicate signals with a riding partner.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
