@@ -1,6 +1,6 @@
 import React from 'react';
 import { SignalType } from '../types';
-import { ArrowBigUp, ArrowBigDown, Hand, ArrowLeft, ArrowRight, Bell } from 'lucide-react';
+import { ArrowBigUp, ArrowBigDown, Hand, ArrowLeft, ArrowRight, Bell, Zap } from 'lucide-react';
 
 interface SignalControlProps {
   onSendSignal: (signal: SignalType) => void;
@@ -9,51 +9,45 @@ interface SignalControlProps {
 
 export const SignalControl: React.FC<SignalControlProps> = ({ onSendSignal, lastSentSignal }) => {
   
-  const btnBase = "flex flex-col items-center justify-center p-3 rounded-xl transition-all active:scale-95 duration-150 shadow-lg";
-  const btnInactive = "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700";
-  const btnActive = "bg-blue-600 text-white border-blue-500 ring-2 ring-blue-400 ring-opacity-50";
+  // Increased base height from h-16 to h-20 for bigger touch targets
+  const btnBase = "flex flex-col items-center justify-center h-20 rounded-2xl transition-all active:scale-95 shadow-sm";
+  const btnInactive = "bg-neutral-800 text-neutral-400 hover:bg-neutral-700";
+  const btnActive = "bg-orange-600 text-white ring-2 ring-orange-400 ring-offset-2 ring-offset-black";
 
-  const getStyle = (type: SignalType) => lastSentSignal === type ? btnActive : btnInactive;
+  const getStyle = (type: SignalType) => `${btnBase} ${lastSentSignal === type ? btnActive : btnInactive}`;
 
   return (
-    <div className="grid grid-cols-3 gap-3 w-full max-w-md mx-auto mt-4">
+    <div className="grid grid-cols-4 gap-3 w-full px-2">
       
-      {/* Move Left */}
-      <button onClick={() => onSendSignal(SignalType.MOVE_LEFT)} className={`${getStyle(SignalType.MOVE_LEFT)}`}>
-        <ArrowLeft size={24} />
-        <span className="text-xs mt-1 font-bold">Left</span>
+      {/* PING - Main Action - Spans 2 cols */}
+      <button onClick={() => onSendSignal(SignalType.PING)} className={`col-span-2 h-20 rounded-2xl flex items-center justify-center gap-2 font-bold uppercase tracking-wide transition-all active:scale-95 ${lastSentSignal === SignalType.PING ? 'bg-orange-600 text-white' : 'bg-white text-black hover:bg-neutral-200'}`}>
+        <Zap size={24} className={lastSentSignal === SignalType.PING ? 'text-white' : 'text-orange-600'} fill="currentColor" />
+        <span className="text-lg">Kudos</span>
       </button>
 
-      {/* Speed Up */}
-      <button onClick={() => onSendSignal(SignalType.SPEED_UP)} className={`${getStyle(SignalType.SPEED_UP)}`}>
-        <ArrowBigUp size={28} className="text-green-400" />
-        <span className="text-xs mt-1 font-bold text-green-400">Speed Up</span>
+      {/* Speed Controls */}
+      <button onClick={() => onSendSignal(SignalType.SPEED_UP)} className={getStyle(SignalType.SPEED_UP)}>
+        <ArrowBigUp size={36} />
       </button>
 
-      {/* Move Right */}
-      <button onClick={() => onSendSignal(SignalType.MOVE_RIGHT)} className={`${getStyle(SignalType.MOVE_RIGHT)}`}>
-        <ArrowRight size={24} />
-        <span className="text-xs mt-1 font-bold">Right</span>
+      <button onClick={() => onSendSignal(SignalType.SLOW_DOWN)} className={getStyle(SignalType.SLOW_DOWN)}>
+        <ArrowBigDown size={36} />
       </button>
 
-      {/* Slow Down */}
-      <button onClick={() => onSendSignal(SignalType.SLOW_DOWN)} className={`${getStyle(SignalType.SLOW_DOWN)}`}>
-        <ArrowBigDown size={28} className="text-amber-400" />
-        <span className="text-xs mt-1 font-bold text-amber-400">Slow Down</span>
+      {/* Directionals */}
+      <button onClick={() => onSendSignal(SignalType.MOVE_LEFT)} className={getStyle(SignalType.MOVE_LEFT)}>
+        <ArrowLeft size={32} />
+      </button>
+      
+      <button onClick={() => onSendSignal(SignalType.STOP)} className={`${getStyle(SignalType.STOP)} !bg-red-500/10 !text-red-500 border border-red-500/20`}>
+        <Hand size={32} />
+      </button>
+      
+      <button onClick={() => onSendSignal(SignalType.MOVE_RIGHT)} className={getStyle(SignalType.MOVE_RIGHT)}>
+        <ArrowRight size={32} />
       </button>
 
-      {/* STOP */}
-      <button onClick={() => onSendSignal(SignalType.STOP)} className={`${getStyle(SignalType.STOP)} bg-red-900/30 border-red-900 hover:bg-red-900/50`}>
-        <Hand size={24} className="text-red-500" />
-        <span className="text-xs mt-1 font-bold text-red-500">STOP</span>
-      </button>
-
-       {/* PING */}
-       <button onClick={() => onSendSignal(SignalType.PING)} className={`${getStyle(SignalType.PING)}`}>
-        <Bell size={24} className="text-purple-400" />
-        <span className="text-xs mt-1 font-bold text-purple-400">PING</span>
-      </button>
-
+      <div className="col-span-1"></div> {/* Spacer or extra slot */}
     </div>
   );
 };
