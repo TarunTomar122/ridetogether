@@ -93,10 +93,24 @@ const App: React.FC = () => {
     // Cleanup existing if any (safety check)
     if (peerRef.current) peerRef.current.destroy();
 
+    console.log("Initializing PeerJS...");
     const peer = new Peer(); 
     peerRef.current = peer;
 
+    // Timeout safety: If PeerJS doesn't give an ID in 10s, show error.
+    const timeoutId = setTimeout(() => {
+      setConnectionStatus(prev => {
+        if (prev === ConnectionStatus.CREATING) {
+          console.error("PeerJS generation timed out");
+          if (peerRef.current) peerRef.current.destroy();
+          return ConnectionStatus.ERROR;
+        }
+        return prev;
+      });
+    }, 10000);
+
     peer.on('open', (id) => {
+      clearTimeout(timeoutId);
       console.log("Peer ID generated:", id);
       setRoomId(id);
       // Use functional update to check current state correctly, avoiding stale closure
@@ -108,6 +122,7 @@ const App: React.FC = () => {
     });
 
     peer.on('error', (err) => {
+      clearTimeout(timeoutId);
       console.error("Peer Error:", err);
       setConnectionStatus(ConnectionStatus.ERROR);
     });
