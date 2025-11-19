@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Coordinates, RideMode, RiderState, SignalType, RideStats, ConnectionStatus, NetworkMessage } from './types';
 import { calculateDistance, calculateBearing, formatSpeed } from './services/mathUtils';
-import { generateRoomId } from './services/roomUtils';
+import { generateRoomId, getFullRoomId } from './services/roomUtils';
 import { Radar } from './components/Radar';
 import { SignalControl } from './components/SignalControl';
 import { Bike, Activity, Copy, MapPin, Zap, Wifi, X, Navigation, Share2, Settings, ChevronRight } from 'lucide-react';
@@ -91,17 +91,27 @@ const App: React.FC = () => {
   const initializePeer = (customId?: string) => {
     if (peerRef.current) peerRef.current.destroy();
 
-    // Generate ID if Hosting, otherwise auto (though for joining we don't use this ID usually)
-    const newId = customId || generateRoomId();
-    console.log("Initializing Peer with ID:", newId);
+    // Generate ID if Hosting (user sees short code)
+    const shortId = customId || generateRoomId();
+    const fullId = getFullRoomId(shortId);
+    
+    console.log("Initializing Peer with Full ID:", fullId);
 
-    // Try to use the readable ID
-    const peer = new Peer(newId); 
+    // Use explicit STUN servers for better connectivity
+    const peer = new Peer(fullId, {
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:global.stun.twilio.com:3478' }
+        ]
+      }
+    }); 
     peerRef.current = peer;
 
     peer.on('open', (id) => {
-      console.log("Peer ID generated:", id);
-      setRoomId(id);
+      console.log("Peer Open. Full ID:", id);
+      // We only show the short code to the user
+      setRoomId(shortId);
       setConnectionStatus(prev => prev === ConnectionStatus.CREATING ? ConnectionStatus.WAITING : prev);
     });
 
@@ -112,11 +122,12 @@ const App: React.FC = () => {
     peer.on('error', (err) => {
       console.error("Peer Error:", err);
       if (err.type === 'unavailable-id') {
-         // If ID taken, try again with a new random one (rare with 4 words, but possible)
+         // If ID taken, try again with a new random one
          if (connectionStatus === ConnectionStatus.CREATING) {
              setTimeout(() => initializePeer(), 500);
          }
       } else {
+         // Show actual error in console/alert if needed, but keep UI simple for now
          setConnectionStatus(ConnectionStatus.ERROR);
       }
     });
@@ -128,14 +139,24 @@ const App: React.FC = () => {
     
     if (peerRef.current) peerRef.current.destroy();
     
-    // When joining, we don't need a specific ID for ourselves, just let PeerJS assign one
-    const peer = new Peer();
+    // For joining, we don't need a specific ID, but we need the same STUN config
+    const peer = new Peer(undefined, {
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:global.stun.twilio.com:3478' }
+        ]
+      }
+    });
     peerRef.current = peer;
     
     peer.on('open', () => {
       if (!peerRef.current) return;
-      // Connect to the Host's Readable ID
-      const conn = peerRef.current.connect(joinInputId);
+      // Connect to the Host's FULL ID
+      const targetFullId = getFullRoomId(joinInputId);
+      console.log("Connecting to:", targetFullId);
+      
+      const conn = peerRef.current.connect(targetFullId);
       handleConnection(conn);
     });
 
@@ -311,9 +332,10 @@ const App: React.FC = () => {
                     <input 
                       type="text"
                       value={joinInputId}
-                      onChange={(e) => setJoinInputId(e.target.value)}
-                      placeholder="e.g. fast-blue-bike-run"
-                      className="flex-grow bg-neutral-900 border border-neutral-800 rounded-xl px-4 text-sm focus:outline-none focus:border-white font-mono placeholder:font-sans"
+                      onChange={(e) => setJoinInputId(e.target.value.toUpperCase())}
+                      placeholder="CODE (e.g. ABCD)"
+                      maxLength={4}
+                      className="flex-grow bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-4 text-lg font-bold focus:outline-none focus:border-white font-mono placeholder:font-sans placeholder:text-sm uppercase"
                     />
                     <button 
                       disabled={!myName || !joinInputId}
